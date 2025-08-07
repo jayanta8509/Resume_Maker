@@ -4,6 +4,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=flat&logo=python)](https://python.org)
 [![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4-412991.svg?style=flat&logo=openai)](https://openai.com)
 [![Pydantic](https://img.shields.io/badge/Pydantic-V2-E92063.svg?style=flat&logo=pydantic)](https://pydantic.dev)
+[![Data cllaction]()](https://brightdata.com/)
 
 > **Advanced AI-powered resume analysis system that aggregates data from multiple sources (Resume, LinkedIn, GitHub, Portfolio) and provides both comprehensive improvement analysis and ATS-optimized outputs tailored to specific job descriptions.**
 
@@ -32,7 +33,7 @@ Resume Maker API is a sophisticated, multi-agent AI system designed to revolutio
 ### Key Capabilities
 
 - **🔍 Multi-Source Data Aggregation**: Combines resume, LinkedIn, GitHub, and portfolio data
-- **🤖 AI-Powered Analysis**: Uses GPT-4 for intelligent content extraction and optimization
+- **🤖 AI-Powered Analysis**: Uses GPT-4o-mini for intelligent content extraction and optimization
 - **🎯 ATS Optimization**: Tailors resumes for Applicant Tracking System compatibility
 - **⚡ Concurrent Processing**: Parallel processing for optimal performance
 - **📊 Comprehensive Output**: Structured data extraction across all resume sections
@@ -126,7 +127,7 @@ graph TB
 - **Python 3.10+**: Core programming language
 
 ### **AI & Machine Learning**
-- **OpenAI GPT-4**: Primary language model for analysis
+- **OpenAI GPT-4o-mini**: Primary language model for analysis
 - **Custom Prompt Engineering**: Specialized prompts for each domain
 - **Structured Output**: JSON schema-based response formatting
 
@@ -134,7 +135,7 @@ graph TB
 - **aiofiles**: Asynchronous file operations
 - **BeautifulSoup4**: Web scraping and HTML parsing
 - **pandas**: Data manipulation and analysis
-- **PyPDF2/pdfminer**: PDF document processing
+- **markitdown**: PDF document processing
 
 ### **External Integrations**
 - **LinkedIn Scraping**: Profile data extraction
@@ -192,6 +193,7 @@ Create a `.env` file in the project root:
 ```env
 OPENAI_API_KEY=your_openai_api_key_here
 ENVIRONMENT=development
+BRIGHT_DATA_API_KEY =api_key
 LOG_LEVEL=info
 MAX_FILE_SIZE=10485760  # 10MB
 ALLOWED_EXTENSIONS=.pdf,.doc,.docx,.txt
@@ -640,7 +642,7 @@ async def test_resume_analysis():
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MAC License - see the [LICENSE](LICENSE) file for details.
 
 ## 📞 Support
 
@@ -648,7 +650,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Documentation**: Check this README and API docs
 - **Issues**: Report bugs via GitHub Issues
 - **Discussions**: Community support in GitHub Discussions
-- **Email**: Contact support@resumemaker.dev
+- **Email**: Contact jayantameslova@gmail.com
 
 ### 🐛 **Common Issues**
 
