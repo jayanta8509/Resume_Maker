@@ -1,0 +1,8 @@
+.env
+env
+test.py
+Scraper\__pycache__
+Multiagent\__pycache__
+Atsagent\__pycache__
+Agent\__pycache__
+__pycache__
