@@ -4,7 +4,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=flat&logo=python)](https://python.org)
 [![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4-412991.svg?style=flat&logo=openai)](https://openai.com)
 [![Pydantic](https://img.shields.io/badge/Pydantic-V2-E92063.svg?style=flat&logo=pydantic)](https://pydantic.dev)
-[![Data cllaction]()](https://brightdata.com/)
+<!-- [![Data cllaction]()](https://brightdata.com/) -->
 
 > **Advanced AI-powered resume analysis system that aggregates data from multiple sources (Resume, LinkedIn, GitHub, Portfolio) and provides both comprehensive improvement analysis and ATS-optimized outputs tailored to specific job descriptions.**
 
