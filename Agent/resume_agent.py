@@ -16,14 +16,6 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 class Duration(BaseModel):
     StartDate: str
     EndDate: str
-
-class ExperienceItem(BaseModel):
-    CompanyName: str
-    Position: str
-    Duration: Duration
-    Location: str
-    Description: str
-
 class EducationItem(BaseModel):
     CollegeUniversity: str
     Location: str
@@ -70,7 +62,6 @@ class Step(BaseModel):
     ProfessionalTitle: str
     Summary: str
     YearsOfExperienceRequired: str
-    Experience: list[ExperienceItem]
     Education: list[EducationItem]
     Languages: list[Languages]
     Projects: list[Projects]
@@ -120,15 +111,7 @@ async def analyze_resume(input_question):
              * If dates are unclear, make reasonable assumptions and note uncertainty
              * For part-time or contract work, count the actual time worked
 
-        5. **Experience:**
-           For each company experience, extract:
-           - Company name (LOOK CAREFULLY - check email domains, LinkedIn URLs, official company names, subsidiaries)
-           - Position/role
-           - Duration (specify EXACT start date and end date in the same format they appear in the resume)
-           - Company location
-           - Detailed description of responsibilities and achievements
-
-        6. **Education:**
+        5. **Education:**
            For each educational institution:
            - College/University name
            - Location of the institution
@@ -137,7 +120,7 @@ async def analyze_resume(input_question):
            - GPA or grade (if mentioned)
            - Additional information (honors, relevant coursework, etc.)
 
-        7. **Skills:**
+        6. **Skills:**
            Categorize skills into groups such as:
            - Programming Languages
            - Frameworks & Libraries
@@ -147,7 +130,7 @@ async def analyze_resume(input_question):
            - Domain Expertise
            (Create appropriate categories based on the resume content)
 
-        8. **Projects:**
+        7. **Projects:**
            For each project mentioned:
            - Project name
            - Description of the project
@@ -155,7 +138,7 @@ async def analyze_resume(input_question):
            - Your role in the project
            - Duration/timeline
 
-        9. **Certifications:**
+        8. **Certifications:**
            For each certification:
            - Certification name
            - Issuing organization
@@ -163,14 +146,14 @@ async def analyze_resume(input_question):
            - Certification ID (if available)
            - Description or relevance
 
-        10. **Achievements:**
+        9. **Achievements:**
            For each achievement/award:
            - Achievement title
            - Issuing organization
            - Date received
            - Description
 
-        11. **Languages:**
+        10. **Languages:**
             For each language:
             - Language name
             - Proficiency level (e.g., Native, Fluent, Intermediate, Basic)

@@ -4,6 +4,7 @@ Resume Processing Module
 This module contains all agent functions for comprehensive resume analysis.
 Each function analyzes specific aspects of resume data from multiple sources.
 """
+import asyncio
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import httpx
@@ -16,7 +17,15 @@ from Atsagent.Ats_projects_agent import analyze_projects
 from Atsagent.Ats_certifications_agent import analyze_certifications
 from Atsagent.Ats_achievements_agent import analyze_achievements
 
-from Scraper.linkedin_scraper import get_dataset_snapshot, extract_linkedin_profile_clean
+# from Scraper.linkedin_scraper import get_dataset_snapshot, extract_linkedin_profile_clean
+
+#linkedin_agent
+from linkedin_agent.LinkedIn_Basic_Info_position_agent import analyze_basic_info_position
+from linkedin_agent.LinkedIn_experience_agent import linkedin_analyze_experience
+from linkedin_agent.LinkedIn_eduction_agent import analyze_linkedin_education
+from linkedin_agent.LinkedIn_certification_language_agent import analyze_linkedin_certification_language
+from linkedin_agent.LinkedIn_project import analyze_linkedin_projects
+
 from Scraper.github_scraper import get_github_profile_info
 from Agent.github_agent import analyze_github_profile
 from Scraper.protflow_other_link import get_portfolio_content
@@ -24,28 +33,36 @@ from Agent.protflow_agent import analyze_portfolio_website
 from Scraper.resume_scraper import get_resume_content
 from Agent.resume_agent import analyze_resume
 from Agent.jd_agent import analyze_jd
+from Agent.resume_experince_agent  import analyze_resume_Experience
 
 
-def collect_linkedin_data(linkedin_profile_link):
-    """
-    Collect LinkedIn profile data in a separate thread.
-    
-    Args:
-        linkedin_profile_link: LinkedIn profile URL
-    
-    Returns:
-        dict: Dictionary containing LinkedIn data or None values if error
-    """
+async def collect_linkedin_data(linkedin_profile_data):
     try:
-        linkedin_profile_data = get_dataset_snapshot(linkedin_profile_link)
-        linkedin_profile_data_clean = extract_linkedin_profile_clean(linkedin_profile_data)
+        linkedin_profile_data = get_resume_content(linkedin_profile_data)
+        # linkedin_profile_data_clean = extract_linkedin_profile_clean(linkedin_profile_data)
+
+        (
+            (linkedin_profile_basic_info_data, linkedin_profile_basic_info_tokens),
+            (linkedin_profile_experience_data, linkedin_profile_experience_tokens),
+            (linkedin_profile_education_data, linkedin_profile_education_tokens),
+            (linkedin_profile_certification_language_data, linkedin_profile_certification_language_tokens),
+            (linkedin_profile_projects_data, linkedin_profile_projects_tokens)
+
+        ) =  await asyncio.gather(
+            analyze_basic_info_position(linkedin_profile_data),
+            linkedin_analyze_experience(linkedin_profile_data),
+            analyze_linkedin_education(linkedin_profile_data),
+            analyze_linkedin_certification_language(linkedin_profile_data),
+            analyze_linkedin_projects(linkedin_profile_data)
+        )
         return {
-            'basic_information': linkedin_profile_data_clean.get("Basic_Information"),
-            'professional_summary': linkedin_profile_data_clean.get("Professional"),
-            'experience': linkedin_profile_data_clean.get("Experience"),
-            'education': linkedin_profile_data_clean.get("Education"),
-            'projects': linkedin_profile_data_clean.get("Projects"),
-            'languages': linkedin_profile_data_clean.get("Languages"),
+            'basic_information': linkedin_profile_basic_info_data.basic_info if linkedin_profile_basic_info_data else None,
+            'professional_summary': linkedin_profile_basic_info_data.basic_info.position if linkedin_profile_basic_info_data and linkedin_profile_basic_info_data.basic_info else "",
+            'experience': linkedin_profile_experience_data.data.experience if linkedin_profile_experience_data and linkedin_profile_experience_data.data else [],
+            'education': (linkedin_profile_education_data.data.education if linkedin_profile_education_data and linkedin_profile_education_data.data else []) + (linkedin_profile_certification_language_data.data.certifications if linkedin_profile_certification_language_data and linkedin_profile_certification_language_data.data else []),
+            'projects': linkedin_profile_projects_data.data.projects if linkedin_profile_projects_data and linkedin_profile_projects_data.data else [],
+            'languages': linkedin_profile_certification_language_data.data.languages if linkedin_profile_certification_language_data and linkedin_profile_certification_language_data.data else [],
+            'tokens': linkedin_profile_basic_info_tokens + linkedin_profile_experience_tokens + linkedin_profile_education_tokens + linkedin_profile_certification_language_tokens + linkedin_profile_projects_tokens,
             'error': None
         }
     except Exception as e:
@@ -239,7 +256,16 @@ async def collect_resume_data(resume_path):
     """
     try:
         resume_profile_data = get_resume_content(resume_path)
-        resume_profile_data_clean, resume_tokens = await analyze_resume(resume_profile_data)
+        # resume_profile_data_clean, resume_tokens = await analyze_resume(resume_profile_data)
+        # resume_experience_data, resume_experience_total_token = await analyze_resume_Experience(resume_profile_data)
+
+        (
+            (resume_profile_data_clean, resume_tokens),
+            (resume_experience_data, resume_experience_total_token)
+        ) = await asyncio.gather(
+            analyze_resume(resume_profile_data),
+            analyze_resume_Experience(resume_profile_data)
+        )
 
         # Extract data from the first step (assuming there's at least one step)
         if resume_profile_data_clean and resume_profile_data_clean.steps:
@@ -252,14 +278,14 @@ async def collect_resume_data(resume_path):
                 'professional_title': resume_step.ProfessionalTitle,
                 'summary': resume_step.Summary,
                 'experience_in_years': resume_step.YearsOfExperienceRequired,
-                'experience': resume_step.Experience,
+                'experience': resume_experience_data,
                 'education': resume_step.Education,
                 'languages': resume_step.Languages,
                 'projects': resume_step.Projects,
                 'certifications': resume_step.Certifications,
                 'achievements': resume_step.Achievements,
                 'skills': resume_step.Skills,
-                'tokens': resume_tokens,
+                'tokens': resume_tokens + resume_experience_total_token,
                 'error': None
             }
         else:
@@ -721,11 +747,10 @@ async def resume_data(resume_path, linkedin_profile_link=None, github_profile_li
     concurrent_tasks = []
     
     # Add LinkedIn task if link provided
+    # Add LinkedIn task if link provided
     if linkedin_profile_link:
-        # LinkedIn is sync, so we run it in a thread executor
-        linkedin_task = asyncio.get_event_loop().run_in_executor(
-            None, collect_linkedin_data, linkedin_profile_link
-        )
+        # LinkedIn is async, so we create a task for concurrent execution
+        linkedin_task = collect_linkedin_data(linkedin_profile_link)
         concurrent_tasks.append(('linkedin', linkedin_task))
     
     # Add GitHub task if link provided

@@ -17,17 +17,24 @@ class Duration(BaseModel):
     StartDate: str
     EndDate: str
 
+class Projects(BaseModel):
+    Project_title: str
+    Role: str
+    technologies_used: list[str]
+    Description: str
+
 class ExperienceItem(BaseModel):
     CompanyName: str
     Position: str
     Duration: Duration
     Location: str
-    Description: str
     SkillSet: list[str]
+    Projects: list[Projects]
+    
 
 class Step(BaseModel):
     Experience: list[ExperienceItem]
-   
+    
 
 class Experience_data(BaseModel):
     steps: list[Step]
@@ -100,6 +107,15 @@ async def analyze_experience(input_question):
            - Remove duplicates and ensure each skill is listed only once per experience
            - Order skills by relevance and importance to the role
            - Include 5-15 skills per experience depending on the complexity and scope of the role
+
+        7. **Project_title**:
+           - Extract the title of the project from the experience (if mentioned check experience description for project title)
+        8. **Role**:
+           - Extract the role of the candidate in the project (if mentioned check experience description for role)
+        9. **technologies_used**:
+           - Extract the technologies used in the project (if mentioned check experience description for technologies used)
+        10. **Description**:
+           - Extract the description of the project (if mentioned check experience description for project description)
 
         **Writing Quality Standards:**
         - Use professional, engaging language that highlights expertise and impact

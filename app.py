@@ -9,7 +9,8 @@ import aiofiles
 from pathlib import Path
 from processing import resume_data, process_all_agents
 from ats_processing import resume_data as ats_resume_data, process_all_agents as ats_process_all_agents,collect_jd_data
-
+from Agent.ats_agent import analyze_ats
+from Scraper.resume_scraper import get_resume_content
 # Initialize FastAPI app
 app = FastAPI(
     title="Resume Maker API",
@@ -77,7 +78,7 @@ async def health_check():
 async def improve_resume(
     resume_file: UploadFile = File(..., description="Resume file (PDF, DOC, DOCX)"),
     github_profile: Optional[str] = Form(None, description="GitHub profile URL"),
-    linkedin_profile: Optional[str] = Form(None, description="LinkedIn profile URL"),
+    linkedin_profile_file: UploadFile = File(..., description="LinkedIn profile file (PDF, DOC, DOCX)"),
     portfolio_link: Optional[str] = Form(None, description="Portfolio website URL"),
     other_link: Optional[str] = Form(None, description="Any other relevant link")
 ):
@@ -86,11 +87,18 @@ async def improve_resume(
         # Validate file type
         allowed_extensions = {'.pdf', '.doc', '.docx', '.txt'}
         file_extension = Path(resume_file.filename).suffix.lower()
+        linkedin_file_extension = Path(linkedin_profile_file.filename).suffix.lower()
         
         if file_extension not in allowed_extensions:
             raise HTTPException(
                 status_code=400, 
                 detail=f"File type {file_extension} not supported. Allowed types: {', '.join(allowed_extensions)}"
+            )
+        
+        if linkedin_file_extension not in allowed_extensions:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"File type {linkedin_file_extension} not supported. Allowed types: {', '.join(allowed_extensions)}"
             )
         
         # Validate URLs if provided
@@ -101,18 +109,13 @@ async def improve_resume(
                 raise HTTPException(status_code=400, detail="Invalid GitHub URL")
             profile_data['github_profile'] = github_profile
             
-        if linkedin_profile:
-            if 'linkedin.com' not in linkedin_profile:
-                raise HTTPException(status_code=400, detail="Invalid LinkedIn URL")
-            profile_data['linkedin_profile'] = linkedin_profile
-            
         if portfolio_link:
             profile_data['portfolio_link'] = portfolio_link
             
         if other_link:
             profile_data['other_link'] = other_link
         
-        # Save uploaded file
+        # Save uploaded resume file
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_filename = f"{timestamp}_{resume_file.filename}"
         file_path = UPLOAD_DIR / safe_filename
@@ -121,9 +124,19 @@ async def improve_resume(
             content = await resume_file.read()
             await f.write(content)
 
+        # Save LinkedIn profile file if provided
+        linkedin_file_path = None
+        if linkedin_profile_file and linkedin_profile_file.filename:
+            linkedin_safe_filename = f"{timestamp}_linkedin_{linkedin_profile_file.filename}"
+            linkedin_file_path = UPLOAD_DIR / linkedin_safe_filename
+            
+            async with aiofiles.open(linkedin_file_path, 'wb') as f:
+                linkedin_content = await linkedin_profile_file.read()
+                await f.write(linkedin_content)
+
         # Process resume data from all sources
         Basic_Information, resume_tokens, github_tokens, protflow_tokens, other_link_tokens = await resume_data(
-            file_path, linkedin_profile, github_profile, other_link, portfolio_link
+            file_path, linkedin_file_path, github_profile, other_link, portfolio_link
         )
         
         # Process all agents and get comprehensive analysis
@@ -131,13 +144,20 @@ async def improve_resume(
             Basic_Information, resume_tokens, github_tokens, protflow_tokens, other_link_tokens
         )
 
-        # Clean up: delete the uploaded file after processing
+        # Clean up: delete the uploaded files after processing
         try:
             if file_path.exists():
                 file_path.unlink()
-                print(f"Successfully deleted uploaded file: {file_path}")
+                print(f"Successfully deleted uploaded resume file: {file_path}")
         except Exception as delete_error:
-            print(f"Warning: Could not delete file {file_path}: {delete_error}")
+            print(f"Warning: Could not delete resume file {file_path}: {delete_error}")
+            
+        try:
+            if linkedin_file_path and linkedin_file_path.exists():
+                linkedin_file_path.unlink()
+                print(f"Successfully deleted uploaded LinkedIn file: {linkedin_file_path}")
+        except Exception as delete_error:
+            print(f"Warning: Could not delete LinkedIn file {linkedin_file_path}: {delete_error}")
             # Continue execution even if file deletion fails
 
         return {
@@ -150,7 +170,7 @@ async def improve_resume(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, status="error", message=f"Error processing resume: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")
     
 
 
@@ -158,7 +178,7 @@ async def improve_resume(
 async def ATS_resume(
     resume_file: UploadFile = File(..., description="Resume file (PDF, DOC, DOCX)"),
     github_profile: Optional[str] = Form(None, description="GitHub profile URL"),
-    linkedin_profile: Optional[str] = Form(None, description="LinkedIn profile URL"),
+    linkedin_profile_file: UploadFile = File(..., description="LinkedIn profile file (PDF, DOC, DOCX)"),
     portfolio_link: Optional[str] = Form(None, description="Portfolio website URL"),
     other_link: Optional[str] = Form(None, description="Any other relevant link"),
     job_description: str = Form(..., description="Job description")
@@ -168,11 +188,18 @@ async def ATS_resume(
         # Validate file type
         allowed_extensions = {'.pdf', '.doc', '.docx', '.txt'}
         file_extension = Path(resume_file.filename).suffix.lower()
-        
+        linkedin_file_extension = Path(linkedin_profile_file.filename).suffix.lower()
+
         if file_extension not in allowed_extensions:
             raise HTTPException(
                 status_code=400, 
                 detail=f"File type {file_extension} not supported. Allowed types: {', '.join(allowed_extensions)}"
+            )
+
+        if linkedin_file_extension not in allowed_extensions:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"File type {linkedin_file_extension} not supported. Allowed types: {', '.join(allowed_extensions)}"
             )
         
         # Validate job description
@@ -191,11 +218,6 @@ async def ATS_resume(
                 raise HTTPException(status_code=400, detail="Invalid GitHub URL")
             profile_data['github_profile'] = github_profile
             
-        if linkedin_profile:
-            if 'linkedin.com' not in linkedin_profile:
-                raise HTTPException(status_code=400, detail="Invalid LinkedIn URL")
-            profile_data['linkedin_profile'] = linkedin_profile
-            
         if portfolio_link:
             profile_data['portfolio_link'] = portfolio_link
             
@@ -210,6 +232,19 @@ async def ATS_resume(
         async with aiofiles.open(file_path, 'wb') as f:
             content = await resume_file.read()
             await f.write(content)
+        
+        # Save LinkedIn profile file if provided
+        linkedin_file_path = None
+        if linkedin_profile_file and linkedin_profile_file.filename:
+            linkedin_safe_filename = f"{timestamp}_linkedin_{linkedin_profile_file.filename}"
+            linkedin_file_path = UPLOAD_DIR / linkedin_safe_filename
+            
+            async with aiofiles.open(linkedin_file_path, 'wb') as f:
+                linkedin_content = await linkedin_profile_file.read()
+                await f.write(linkedin_content)
+
+
+        
 
         # Process job description to extract structured JD data
         print("🔍 Processing job description...")
@@ -219,7 +254,7 @@ async def ATS_resume(
         # Process resume data from all sources using ATS processing
         print("📄 Processing resume and external sources...")
         Basic_Information, resume_tokens, github_tokens, protflow_tokens, other_link_tokens = await ats_resume_data(
-            file_path, linkedin_profile, github_profile, other_link, portfolio_link
+            file_path, linkedin_file_path, github_profile, other_link, portfolio_link
         )
         
         # Process all ATS agents with JD data for optimization
@@ -236,6 +271,14 @@ async def ATS_resume(
         except Exception as delete_error:
             print(f"Warning: Could not delete file {file_path}: {delete_error}")
             # Continue execution even if file deletion fails
+        
+        try:
+            if linkedin_file_path and linkedin_file_path.exists():
+                linkedin_file_path.unlink()
+                print(f"Successfully deleted uploaded LinkedIn file: {linkedin_file_path}")
+        except Exception as delete_error:
+            print(f"Warning: Could not delete LinkedIn file {linkedin_file_path}: {delete_error}")
+            # Continue execution even if file deletion fails
 
         return {
             "status_code": 200,
@@ -247,7 +290,59 @@ async def ATS_resume(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, status="error", message=f"Error processing resume: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")
+    
+
+@app.post("/ATS-score")
+async def ATS_score(
+   resume_file: UploadFile = File(..., description="Resume file (PDF, DOC, DOCX)"),
+):
+    """ATS score using provided resume text"""
+    try:
+        # Validate file type
+        allowed_extensions = {'.pdf', '.doc', '.docx', '.txt'}
+        file_extension = Path(resume_file.filename).suffix.lower()
+        
+        if file_extension not in allowed_extensions:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"File type {file_extension} not supported. Allowed types: {', '.join(allowed_extensions)}"
+            )
+        
+        # Save uploaded file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_filename = f"{timestamp}_{resume_file.filename}"
+        file_path = UPLOAD_DIR / safe_filename
+        
+        async with aiofiles.open(file_path, 'wb') as f:
+            content = await resume_file.read()
+            await f.write(content)
+        
+        resume_text = get_resume_content(file_path)
+        ATS_score_float, totat_tokens = await analyze_ats(resume_text)
+
+        # Clean up: delete the uploaded file after processing
+        try:
+            if file_path.exists():
+                file_path.unlink()
+                print(f"Successfully deleted uploaded file: {file_path}")
+        except Exception as delete_error:
+            print(f"Warning: Could not delete file {file_path}: {delete_error}")
+            # Continue execution even if file deletion fails
+
+        return {
+            "status_code": 200,
+            "status": "success",
+            "message": "ATS score completed successfully",
+            "ATS_score": ATS_score_float,
+            "total_tokens": totat_tokens
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")
+        
 
 
 if __name__ == "__main__":
