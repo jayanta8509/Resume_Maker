@@ -6,3 +6,5 @@ Multiagent\__pycache__
 Atsagent\__pycache__
 Agent\__pycache__
 __pycache__
+
+start code :- nohup python3 app.py start > app.log 2>&1 &
