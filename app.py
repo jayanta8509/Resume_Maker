@@ -10,6 +10,7 @@ from pathlib import Path
 from processing import resume_data, process_all_agents
 from ats_processing import resume_data as ats_resume_data, process_all_agents as ats_process_all_agents,collect_jd_data
 from Agent.ats_agent import analyze_ats
+from Agent.ats_with_jd_agent import analyze_ats_with_jd
 from Scraper.resume_scraper import get_resume_content
 from linkedin_rewrite_process import linkedin_rewrite_process
 
@@ -80,7 +81,7 @@ async def health_check():
 async def improve_resume(
     resume_file: UploadFile = File(..., description="Resume file (PDF, DOC, DOCX)"),
     github_profile: Optional[str] = Form(None, description="GitHub profile URL"),
-    linkedin_profile_file: UploadFile = File(..., description="LinkedIn profile file (PDF, DOC, DOCX)"),
+    linkedin_profile_file: Optional[UploadFile] = File(None, description="LinkedIn profile file (PDF, DOC, DOCX)"),
     portfolio_link: Optional[str] = Form(None, description="Portfolio website URL"),
     other_link: Optional[str] = Form(None, description="Any other relevant link")
 ):
@@ -89,19 +90,20 @@ async def improve_resume(
         # Validate file type
         allowed_extensions = {'.pdf', '.doc', '.docx', '.txt'}
         file_extension = Path(resume_file.filename).suffix.lower()
-        linkedin_file_extension = Path(linkedin_profile_file.filename).suffix.lower()
-        
         if file_extension not in allowed_extensions:
             raise HTTPException(
                 status_code=400, 
                 detail=f"File type {file_extension} not supported. Allowed types: {', '.join(allowed_extensions)}"
             )
         
-        if linkedin_file_extension not in allowed_extensions:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"File type {linkedin_file_extension} not supported. Allowed types: {', '.join(allowed_extensions)}"
-            )
+        # Validate LinkedIn file only if provided
+        if linkedin_profile_file and linkedin_profile_file.filename:
+            linkedin_file_extension = Path(linkedin_profile_file.filename).suffix.lower()
+            if linkedin_file_extension not in allowed_extensions:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"LinkedIn file type {linkedin_file_extension} not supported. Allowed types: {', '.join(allowed_extensions)}"
+                )
         
         # Validate URLs if provided
         profile_data = {}
@@ -180,7 +182,7 @@ async def improve_resume(
 async def ATS_resume(
     resume_file: UploadFile = File(..., description="Resume file (PDF, DOC, DOCX)"),
     github_profile: Optional[str] = Form(None, description="GitHub profile URL"),
-    linkedin_profile_file: UploadFile = File(..., description="LinkedIn profile file (PDF, DOC, DOCX)"),
+    linkedin_profile_file: Optional[UploadFile] = File(None, description="LinkedIn profile file (PDF, DOC, DOCX)"),
     portfolio_link: Optional[str] = Form(None, description="Portfolio website URL"),
     other_link: Optional[str] = Form(None, description="Any other relevant link"),
     job_description: str = Form(..., description="Job description")
@@ -190,19 +192,20 @@ async def ATS_resume(
         # Validate file type
         allowed_extensions = {'.pdf', '.doc', '.docx', '.txt'}
         file_extension = Path(resume_file.filename).suffix.lower()
-        linkedin_file_extension = Path(linkedin_profile_file.filename).suffix.lower()
-
         if file_extension not in allowed_extensions:
             raise HTTPException(
                 status_code=400, 
                 detail=f"File type {file_extension} not supported. Allowed types: {', '.join(allowed_extensions)}"
             )
 
-        if linkedin_file_extension not in allowed_extensions:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"File type {linkedin_file_extension} not supported. Allowed types: {', '.join(allowed_extensions)}"
-            )
+        # Validate LinkedIn file only if provided
+        if linkedin_profile_file and linkedin_profile_file.filename:
+            linkedin_file_extension = Path(linkedin_profile_file.filename).suffix.lower()
+            if linkedin_file_extension not in allowed_extensions:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"LinkedIn file type {linkedin_file_extension} not supported. Allowed types: {', '.join(allowed_extensions)}"
+                )
         
         # Validate job description
         if not job_description:
@@ -394,6 +397,57 @@ async def Linkedin_rewrite(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")
         
+
+@app.post("/ATS-score-with-JD")
+async def ATS_score_with_JD(
+   resume_file: UploadFile = File(..., description="Resume file (PDF, DOC, DOCX)"),
+   job_description: str = Form(..., description="Job description")
+):
+    """ATS score using provided resume text and job description"""
+    try:
+        # Validate file type
+        allowed_extensions = {'.pdf', '.doc', '.docx', '.txt'}
+        file_extension = Path(resume_file.filename).suffix.lower()
+        
+        if file_extension not in allowed_extensions:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"File type {file_extension} not supported. Allowed types: {', '.join(allowed_extensions)}"
+            )
+        
+        # Save uploaded file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_filename = f"{timestamp}_{resume_file.filename}"
+        file_path = UPLOAD_DIR / safe_filename
+        
+        async with aiofiles.open(file_path, 'wb') as f:
+            content = await resume_file.read()
+            await f.write(content)
+        
+        resume_text = get_resume_content(file_path)
+        ATS_score_float, totat_tokens = await analyze_ats_with_jd(resume_text, job_description)
+
+        # Clean up: delete the uploaded file after processing
+        try:
+            if file_path.exists():
+                file_path.unlink()
+                print(f"Successfully deleted uploaded file: {file_path}")
+        except Exception as delete_error:
+            print(f"Warning: Could not delete file {file_path}: {delete_error}")
+            # Continue execution even if file deletion fails
+
+        return {
+            "status_code": 200,
+            "status": "success",
+            "message": "ATS score completed successfully",
+            "ATS_score": ATS_score_float,
+            "total_tokens": totat_tokens
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")
 
 
 if __name__ == "__main__":

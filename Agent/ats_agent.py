@@ -45,8 +45,6 @@ Rules
 - Do NOT include any prose, markdown, explanations, or extra fields.
 - Do NOT assume a job description; evaluate the resume standalone.
 - If the resume text is empty or non-resume content, return 0.
-
-Return only the JSON object.
     """
 
     # Get the async client
