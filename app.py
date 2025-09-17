@@ -300,40 +300,11 @@ async def ATS_resume(
 
 @app.post("/ATS-score")
 async def ATS_score(
-   resume_file: UploadFile = File(..., description="Resume file (PDF, DOC, DOCX)"),
+   resume_text: str = Form(..., description="structured resume data"),
 ):
     """ATS score using provided resume text"""
     try:
-        # Validate file type
-        allowed_extensions = {'.pdf', '.doc', '.docx', '.txt'}
-        file_extension = Path(resume_file.filename).suffix.lower()
-        
-        if file_extension not in allowed_extensions:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"File type {file_extension} not supported. Allowed types: {', '.join(allowed_extensions)}"
-            )
-        
-        # Save uploaded file
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_filename = f"{timestamp}_{resume_file.filename}"
-        file_path = UPLOAD_DIR / safe_filename
-        
-        async with aiofiles.open(file_path, 'wb') as f:
-            content = await resume_file.read()
-            await f.write(content)
-        
-        resume_text = get_resume_content(file_path)
         ATS_score_float, totat_tokens = await analyze_ats(resume_text)
-
-        # Clean up: delete the uploaded file after processing
-        try:
-            if file_path.exists():
-                file_path.unlink()
-                print(f"Successfully deleted uploaded file: {file_path}")
-        except Exception as delete_error:
-            print(f"Warning: Could not delete file {file_path}: {delete_error}")
-            # Continue execution even if file deletion fails
 
         return {
             "status_code": 200,
@@ -351,7 +322,7 @@ async def ATS_score(
 
 @app.post("/Linkedin-rewrite")
 async def Linkedin_rewrite(
-   linkedin_file: UploadFile = File(..., description="Resume file (PDF, DOC, DOCX)"),
+   linkedin_file: UploadFile = File(..., description="linkedin file (PDF, DOC, DOCX)"),
 ):
     """Linkedin rewrite using provided linkedin file"""
     try:
@@ -400,42 +371,12 @@ async def Linkedin_rewrite(
 
 @app.post("/ATS-score-with-JD")
 async def ATS_score_with_JD(
-   resume_file: UploadFile = File(..., description="Resume file (PDF, DOC, DOCX)"),
-   job_description: str = Form(..., description="Job description")
+   resume_text: str = Form(..., description="structured resume data"),
+   job_description: str = Form(..., description="structured job description")
 ):
-    """ATS score using provided resume text and job description"""
+    """ATS score using provided structured resume data and structured job description"""
     try:
-        # Validate file type
-        allowed_extensions = {'.pdf', '.doc', '.docx', '.txt'}
-        file_extension = Path(resume_file.filename).suffix.lower()
-        
-        if file_extension not in allowed_extensions:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"File type {file_extension} not supported. Allowed types: {', '.join(allowed_extensions)}"
-            )
-        
-        # Save uploaded file
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_filename = f"{timestamp}_{resume_file.filename}"
-        file_path = UPLOAD_DIR / safe_filename
-        
-        async with aiofiles.open(file_path, 'wb') as f:
-            content = await resume_file.read()
-            await f.write(content)
-        
-        resume_text = get_resume_content(file_path)
         ATS_score_float, totat_tokens = await analyze_ats_with_jd(resume_text, job_description)
-
-        # Clean up: delete the uploaded file after processing
-        try:
-            if file_path.exists():
-                file_path.unlink()
-                print(f"Successfully deleted uploaded file: {file_path}")
-        except Exception as delete_error:
-            print(f"Warning: Could not delete file {file_path}: {delete_error}")
-            # Continue execution even if file deletion fails
-
         return {
             "status_code": 200,
             "status": "success",
