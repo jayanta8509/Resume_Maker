@@ -11,6 +11,8 @@ from processing import resume_data, process_all_agents
 from ats_processing import resume_data as ats_resume_data, process_all_agents as ats_process_all_agents,collect_jd_data
 from Agent.ats_agent import analyze_ats
 from Scraper.resume_scraper import get_resume_content
+from linkedin_rewrite_process import linkedin_rewrite_process
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Resume Maker API",
@@ -336,6 +338,55 @@ async def ATS_score(
             "message": "ATS score completed successfully",
             "ATS_score": ATS_score_float,
             "total_tokens": totat_tokens
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")
+
+
+@app.post("/Linkedin-rewrite")
+async def Linkedin_rewrite(
+   linkedin_file: UploadFile = File(..., description="Resume file (PDF, DOC, DOCX)"),
+):
+    """Linkedin rewrite using provided linkedin file"""
+    try:
+        # Validate file type
+        allowed_extensions = {'.pdf', '.doc', '.docx', '.txt'}
+        file_extension = Path(linkedin_file.filename).suffix.lower()
+        
+        if file_extension not in allowed_extensions:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"File type {file_extension} not supported. Allowed types: {', '.join(allowed_extensions)}"
+            )
+        
+        # Save uploaded file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_filename = f"{timestamp}_{linkedin_file.filename}"
+        file_path = UPLOAD_DIR / safe_filename
+        
+        async with aiofiles.open(file_path, 'wb') as f:
+            content = await linkedin_file.read()
+            await f.write(content)
+        
+        linkedin_rewrite_data = await linkedin_rewrite_process(file_path)
+
+        # Clean up: delete the uploaded file after processing
+        try:
+            if file_path.exists():
+                file_path.unlink()
+                print(f"Successfully deleted uploaded file: {file_path}")
+        except Exception as delete_error:
+            print(f"Warning: Could not delete file {file_path}: {delete_error}")
+            # Continue execution even if file deletion fails
+
+        return {
+            "status_code": 200,
+            "status": "success",
+            "message": "Linkedin rewrite completed successfully",
+            "linkedin_rewrite_data": linkedin_rewrite_data
         }
         
     except HTTPException:
