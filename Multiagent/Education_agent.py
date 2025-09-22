@@ -18,7 +18,7 @@ class EducationItem(BaseModel):
     Location: str
     CourseDegree: str
     GraduationYear: str
-    GPAorGrade: str
+    GPAorGrade: float
     AdditionalInformation: str
 
 
