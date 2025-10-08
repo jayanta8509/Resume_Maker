@@ -1,3 +1,4 @@
+from typing import List, Dict, Optional
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator, Field, HttpUrl
@@ -13,6 +14,9 @@ from Agent.ats_agent import analyze_ats
 from Agent.ats_with_jd_agent import analyze_ats_with_jd
 from Scraper.resume_scraper import get_resume_content
 from linkedin_rewrite_process import linkedin_rewrite_process
+from chat_section.Experience_agent import improve_experience_description
+from chat_section.vectordata import FAISSVectorDB
+from question_process import collect_resume_andlinkdin_data , generate_questions
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -54,6 +58,7 @@ class ResumeImprovementData(BaseModel):
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
+vector_db = FAISSVectorDB(db_path="./my_faiss_db")
 
 @app.get("/")
 async def root():
@@ -77,8 +82,38 @@ async def health_check():
         "service": "Resume Maker API"
     }
 
+
+
+
+# Define Pydantic models for structured data
+class Duration(BaseModel):
+    StartDate: str
+    EndDate: str
+
+class Project(BaseModel):
+    Project_title: str
+    Role: Optional[str] = ""
+    technologies_used: List[str]
+    Description: str
+
+class Experience(BaseModel):
+    CompanyName: str
+    Position: str
+    Duration: Duration
+    Location: str
+    SkillSet: List[str]
+    Projects: List[Project]
+
+class ATSRequestBody(BaseModel):
+    user_id: str
+    experience_data: List[Experience]
+    question_answers: Dict[str, Dict[str, str]]
+
+
+
 @app.post("/improvement-resume")
 async def improve_resume(
+    user_id: str = Form(..., description="User ID"),
     resume_file: UploadFile = File(..., description="Resume file (PDF, DOC, DOCX)"),
     github_profile: Optional[str] = Form(None, description="GitHub profile URL"),
     linkedin_profile_file: Optional[UploadFile] = File(None, description="LinkedIn profile file (PDF, DOC, DOCX)"),
@@ -142,11 +177,14 @@ async def improve_resume(
         Basic_Information, resume_tokens, github_tokens, protflow_tokens, other_link_tokens = await resume_data(
             file_path, linkedin_file_path, github_profile, other_link, portfolio_link
         )
-        
         # Process all agents and get comprehensive analysis
         analysis_results = await process_all_agents(
             Basic_Information, resume_tokens, github_tokens, protflow_tokens, other_link_tokens
         )
+
+        # Generate questions based on user_id
+        store_data = collect_resume_andlinkdin_data(user_id, file_path, linkedin_file_path)
+        all_questions = generate_questions(user_id)
 
         # Clean up: delete the uploaded files after processing
         try:
@@ -168,6 +206,7 @@ async def improve_resume(
             "status_code": 200,
             "status": "success",
             "message": "Comprehensive resume analysis completed successfully",
+            "generated_questions": all_questions,
             **analysis_results
         }
         
@@ -180,6 +219,7 @@ async def improve_resume(
 
 @app.post("/ATS-resume")
 async def ATS_resume(
+    user_id: str = Form(..., description="User ID"),
     resume_file: UploadFile = File(..., description="Resume file (PDF, DOC, DOCX)"),
     github_profile: Optional[str] = Form(None, description="GitHub profile URL"),
     linkedin_profile_file: Optional[UploadFile] = File(None, description="LinkedIn profile file (PDF, DOC, DOCX)"),
@@ -268,6 +308,10 @@ async def ATS_resume(
             Basic_Information, jd_data, resume_tokens, github_tokens, protflow_tokens, other_link_tokens
         )
 
+        # Generate questions based on user_id
+        store_data = collect_resume_andlinkdin_data(user_id, file_path, linkedin_file_path)
+        all_questions = generate_questions(user_id)
+
         # Clean up: delete the uploaded file after processing
         try:
             if file_path.exists():
@@ -289,6 +333,7 @@ async def ATS_resume(
             "status_code": 200,
             "status": "success",
             "message": "ATS-optimized resume analysis completed successfully",
+            "generated_questions": all_questions,
             **analysis_results
         }
         
@@ -389,6 +434,36 @@ async def ATS_score_with_JD(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")
+
+
+
+@app.post("/improve-experience")
+async def final_experience_responce(request: ATSRequestBody):
+    """Improve experience using user_id, experience data, and question-answers"""
+    try:
+        # Option 1: If improve_experience_description expects structured data
+        improved_experience, tokens = await improve_experience_description(
+            user_id=request.user_id,
+            experience_data=request.experience_data,
+            question_answers=request.question_answers,
+            vector_db=vector_db
+        )
+        
+        return {
+            "status_code": 200,
+            "status": "success",
+            "message": "Improved experience process successfully",
+            "improved_experience": improved_experience,
+            "total_tokens": tokens
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error processing experience: {str(e)}"
+        )
 
 
 if __name__ == "__main__":
