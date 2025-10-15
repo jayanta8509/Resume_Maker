@@ -13,5 +13,6 @@ Jayanta-Roy-resume.pdf
 chat_test2.py
 chat_section.png
 my_faiss_db
+jayanta123_faiss_db
 
 start code :- nohup python3 app.py start > app.log 2>&1 &

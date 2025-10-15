@@ -58,7 +58,7 @@ class ResumeImprovementData(BaseModel):
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
-vector_db = FAISSVectorDB(db_path="./my_faiss_db")
+
 
 @app.get("/")
 async def root():
@@ -440,6 +440,7 @@ async def ATS_score_with_JD(
 @app.post("/improve-experience")
 async def final_experience_responce(request: ATSRequestBody):
     """Improve experience using user_id, experience data, and question-answers"""
+    vector_db = FAISSVectorDB(db_path=f"./{request.user_id}_faiss_db")
     try:
         # Option 1: If improve_experience_description expects structured data
         improved_experience, tokens = await improve_experience_description(
