@@ -14,6 +14,7 @@ from Agent.ats_agent import analyze_ats
 from Agent.ats_with_jd_agent import analyze_ats_with_jd
 from Scraper.resume_scraper import get_resume_content
 from linkedin_rewrite_process import linkedin_rewrite_process
+from linkedin_rewrite_process import linkedin_rewrite_process_text
 from chat_section.Experience_agent import improve_experience_description
 from chat_section.vectordata import FAISSVectorDB
 from question_process import collect_resume_andlinkdin_data , generate_questions
@@ -413,6 +414,30 @@ async def Linkedin_rewrite(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")
         
+
+@app.post("/Linkedin-rewrite-text")
+async def Linkedin_rewrite_text(
+   linkedin_text: str = Form(..., description="linkedin text data"),
+):
+    """Linkedin rewrite using provided linkedin text data"""
+    try:
+        # Validate file type
+        if not linkedin_text:
+            raise HTTPException(status_code=400, detail="Linkedin text data is required")
+        
+        linkedin_rewrite_data = await linkedin_rewrite_process_text(linkedin_text)
+
+        return {
+            "status_code": 200,
+            "status": "success",
+            "message": "Linkedin rewrite completed successfully",
+            "linkedin_rewrite_data": linkedin_rewrite_data
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")
 
 @app.post("/ATS-score-with-JD")
 async def ATS_score_with_JD(
