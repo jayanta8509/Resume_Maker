@@ -206,8 +206,6 @@ async def collect_resume_data(resume_path):
     """
     try:
         resume_profile_data = get_resume_content(resume_path)
-        # resume_profile_data_clean, resume_tokens = await analyze_resume(resume_profile_data)
-        # resume_experience_data, resume_experience_total_token = await analyze_resume_Experience(resume_profile_data)
 
         (
             (resume_profile_data_clean, resume_tokens),

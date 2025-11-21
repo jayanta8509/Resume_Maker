@@ -184,8 +184,22 @@ async def improve_resume(
         )
 
         # Generate questions based on user_id
+        print(f"🎯 Starting question generation process for user_id: {user_id}")
         store_data = collect_resume_andlinkdin_data(user_id, file_path, linkedin_file_path)
         all_questions = generate_questions(user_id)
+
+        # Ensure we always return some questions, even if generation fails
+        if not all_questions:
+            print("⚠️ No questions generated, providing default questions")
+            all_questions = {
+                "Default Company": [
+                    "What were your key responsibilities and achievements in this role?",
+                    "Can you quantify the impact you made on the business or team?",
+                    "What specific skills or technologies did you utilize or learn?",
+                    "What challenges did you overcome and how did you solve them?",
+                    "What projects were you most proud of and why?"
+                ]
+            }
 
         # Clean up: delete the uploaded files after processing
         try:
@@ -310,8 +324,23 @@ async def ATS_resume(
         )
 
         # Generate questions based on user_id
+        print(f"🎯 Starting question generation process for user_id: {user_id}")
         store_data = collect_resume_andlinkdin_data(user_id, file_path, linkedin_file_path)
         all_questions = generate_questions(user_id)
+
+        # Ensure we always return some questions, even if generation fails
+        if not all_questions:
+            print("⚠️ No questions generated, providing default questions")
+            all_questions = {
+                "Default Company": [
+                    "What were your key responsibilities and achievements in this role?",
+                    "Can you quantify the impact you made on the business or team?",
+                    "What specific skills or technologies did you utilize or learn?",
+                    "What challenges did you overcome and how did you solve them?",
+                    "What projects were you most proud of and why?"
+                ]
+            }
+        print(all_questions)
 
         # Clean up: delete the uploaded file after processing
         try:

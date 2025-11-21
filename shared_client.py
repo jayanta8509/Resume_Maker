@@ -14,16 +14,30 @@ load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Create custom HTTP client with higher connection limits for concurrency
+# custom_http_client = httpx.AsyncClient(
+#     limits=httpx.Limits(
+#         max_connections=50,      # Allow up to 50 concurrent connections
+#         max_keepalive_connections=20,  # Keep 20 connections alive
+#     ),
+#     timeout=httpx.Timeout(
+#         connect=30.0,    # 30 seconds to establish connection
+#         read=120.0,      # 2 minutes to read response
+#         write=30.0,      # 30 seconds to send request
+#         pool=30.0        # 30 seconds to get connection from pool
+#     )
+# )
+
+
 custom_http_client = httpx.AsyncClient(
     limits=httpx.Limits(
-        max_connections=50,      # Allow up to 50 concurrent connections
-        max_keepalive_connections=20,  # Keep 20 connections alive
+        max_connections=200,          # Increase for concurrent AI requests
+        max_keepalive_connections=70, # More persistent connections
     ),
     timeout=httpx.Timeout(
-        connect=30.0,    # 30 seconds to establish connection
-        read=120.0,      # 2 minutes to read response
-        write=30.0,      # 30 seconds to send request
-        pool=30.0        # 30 seconds to get connection from pool
+        connect=70.0,    # 1 minute to establish connection  
+        read=500.0,      # 5 minutes to read response (AI processing can be slow)
+        write=300.0,      # 1 minute to send request
+        pool=120.0        # 1 minute to get connection from pool
     )
 )
 

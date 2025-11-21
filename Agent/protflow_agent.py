@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
+# openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Define Pydantic models for structured output
 class ProtflowAnalysis(BaseModel):
@@ -243,7 +243,7 @@ async def analyze_large_portfolio(html_data: str, max_retries: int) -> Tuple[Opt
         client = await get_async_client()
         
         final_completion = await client.beta.chat.completions.parse(
-            model="gpt-4o-mini",
+            model="gpt-5.1",
             messages=[
                 {"role": "system", "content": final_prompt},
                 {"role": "user", "content": combined_analysis}
@@ -330,7 +330,7 @@ async def analyze_portfolio_direct(html_data: str, max_retries: int) -> Tuple[Op
             client = await get_async_client()
             
             completion = await client.beta.chat.completions.parse(
-                model="gpt-4o-mini",
+                model="gpt-5.1",
                 messages=[
                     {"role": "system", "content": prompt_template},
                     {"role": "user", "content": f"Analyze this portfolio website HTML content and create a comprehensive summary: {html_data}"}

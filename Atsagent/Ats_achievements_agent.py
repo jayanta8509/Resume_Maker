@@ -11,7 +11,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from shared_client import get_async_client
 
 load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
+# openai_api_key = os.getenv("OPENAI_API_KEY")
 
 class Achievements(BaseModel):
     Achievement_Titlee: str
@@ -152,7 +152,7 @@ async def analyze_achievements(input_question, jd_input):
     client = await get_async_client()
     
     completion = await client.beta.chat.completions.parse(
-    model="gpt-4o-mini",
+    model="gpt-5.1",
     messages=[
         {"role": "system", "content": prompt_template},
         {"role": "user", "content": f"Achievement Information: {input_question}\n\nJob Description Requirements for ATS Optimization:\nSoft Skills: {jd_input.get('soft_skills', [])}\nAction Verbs: {jd_input.get('action_verbs', [])}"}

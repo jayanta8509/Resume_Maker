@@ -11,7 +11,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from shared_client import get_async_client
 
 load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
+# openai_api_key = os.getenv("OPENAI_API_KEY")
 
 class Duration(BaseModel):
     StartDate: str
@@ -62,11 +62,19 @@ async def analyze_resume_Experience(input_question):
             7) SKILLSET (per company): Provide a deduplicated list of skills explicitly mentioned in that company’s section (including bullets and project descriptions). Do not pull skills from other parts of the resume.
             
             8) PROJECTS (inside each company):
-            - Include every distinct project explicitly named or clearly described under that company’s experience.
-            - If a project title is explicitly named (e.g., “Project: Phoenix”), copy it exactly; otherwise set Project_title to "".
-            - Role: copy exactly if present (e.g., “Backend Engineer”, “Tech Lead”); else "".
-            - technologies_used: only include technologies/tools explicitly tied to that project in the resume; else [].
-            - Description: concise 1–3 sentence summary strictly from resume text; else "".
+            - **AGGRESSIVE EXTRACTION**: Find EVERY project mentioned under each company experience, including bullet points, achievements, or descriptions that describe specific work
+            - Project_title:
+              * If explicitly named (e.g., "Project: Phoenix", "E-commerce Platform"), copy it exactly
+              * If not named but clearly described, CREATE a descriptive title based on the work described (e.g., "Customer Management System", "Mobile App Development")
+              * **NEVER leave Project_title empty if there's any project work described**
+            - Role:
+              * Copy exactly if specified (e.g., "Backend Engineer", "Tech Lead")
+              * If not specified but implied from the job position, use the job title (e.g., "Software Engineer")
+              * **NEVER leave Role empty if there's project work**
+            - technologies_used: extract all technologies mentioned in relation to the project or role
+            - Description:
+              * Create a summary based on the project work described in bullet points or text
+              * **NEVER leave Description empty if project work exists**
             
             9) OVERLAPS: If date ranges overlap across roles, do not merge or modify; simply record each role as it appears.
             
@@ -75,8 +83,14 @@ async def analyze_resume_Experience(input_question):
             EDGE CASES TO HANDLE
             - Internships, apprenticeships, contracts, part-time, freelance → include them like other roles.
             - Company acquisitions/renames → use the name as written for the period.
-            - Dates shown as "2019-Present", "Jul’19 – Mar’22", "07/2019 – 03/2022" → preserve original forms.
+            - Dates shown as "2019-Present", "Jul'19 – Mar'22", "07/2019 – 03/2022" → preserve original forms.
             - If only a year is given (e.g., "2021 – 2023"), keep it as is.
+
+            **CRITICAL: PROJECT EXTRACTION RULES**
+            - If a company section has bullet points, achievements, or detailed responsibilities, TREAT EACH as potential projects
+            - Look for phrases like: "developed", "built", "created", "led", "implemented", "designed", "managed" - these indicate project work
+            - **NEVER return empty Projects list [] if the work description contains specific achievements or deliverables**
+            - When in doubt, create a project entry rather than leaving it empty
 
         """
     
@@ -84,7 +98,7 @@ async def analyze_resume_Experience(input_question):
     client = await get_async_client()
     
     completion = await client.beta.chat.completions.parse(
-    model="gpt-4o-mini",
+    model="gpt-5.1",
     messages=[
         {"role": "system", "content": prompt_template},
         {"role": "user", "content": input_question}
@@ -99,6 +113,7 @@ async def analyze_resume_Experience(input_question):
         return None, total_tokens
     else:
         parsed_data = resume_experience_data(steps=analysis_response.parsed.steps)
+        print("dataatatata : ", parsed_data)
         return parsed_data, total_tokens
 
 

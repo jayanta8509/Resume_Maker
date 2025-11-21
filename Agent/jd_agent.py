@@ -11,7 +11,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from shared_client import get_async_client
 
 load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
+# openai_api_key = os.getenv("OPENAI_API_KEY")
 
     
 class JDAnalysis(BaseModel):
@@ -124,7 +124,7 @@ async def analyze_jd(job_description):
     client = await get_async_client()
     
     completion = await client.beta.chat.completions.parse(
-        model="gpt-4o-mini",
+        model="gpt-5.1",
         messages=[
             {"role": "system", "content": prompt_template},
             {"role": "user", "content": f"Extract structured data from this job description: {job_description}"}

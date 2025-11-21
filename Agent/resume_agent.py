@@ -11,7 +11,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from shared_client import get_async_client
 
 load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
+# openai_api_key = os.getenv("OPENAI_API_KEY")
 
 class Duration(BaseModel):
     StartDate: str
@@ -93,23 +93,21 @@ async def analyze_resume(input_question):
            - Ensure the recommendation reflects realistic career advancement and industry relevance
 
         4. **Years of Experience Required:**
-           - **CRITICAL**: Calculate the total professional work experience in years based on all employment history
-           - **Calculation Method**: 
-             * Analyze each work experience entry and extract start/end dates
-             * Convert all date ranges to years and months
-             * Sum up the total duration across all positions
-             * Handle overlapping employment periods by counting them only once
-             * For current roles (ongoing), calculate from start date to present
-             * Account for gaps in employment (do not count gap periods)
-           - **Output Format**: Provide as a single number followed by "years" (e.g., "3.5 years", "7 years", "1.2 years")
+           - **CRITICAL**: Calculate ACCURATE total professional work experience in years based on ALL employment history
+           - **Calculation Rules**:
+             * Extract ALL work experience dates from the resume
+             * Calculate experience from EACH job's start date to end date (or present for current jobs)
+             * **IMPORTANT**: Do NOT double-count overlapping time periods
+             * Sum up ALL non-overlapping professional experience
+             * Use current year (2025) for "Present" calculations
+           - **Output Format**: Single number followed by "years" (e.g., "7 years", "4.8 years", "12 years")
            - **Examples**:
-             * Jan 2020 - Dec 2022 = 3 years
-             * Mar 2019 - Present (assuming current date is 2024) = 5 years
-             * Multiple roles: 2 years + 1.5 years + 3 years = 6.5 years
-           - **Edge Cases**:
-             * If experience is less than 1 year, use months (e.g., "8 months")
-             * If dates are unclear, make reasonable assumptions and note uncertainty
-             * For part-time or contract work, count the actual time worked
+             * 2018 - Present = 7 years (2025 - 2018)
+             * 2020 - 2023 = 3 years
+             * Multiple jobs: 2018-2020 (2 years) + 2021-Present (4 years) = 6 years total
+           - **CRITICAL CHECK**: Verify calculation by adding up all individual job durations
+           * Be EXTRA careful with date calculations - double-check your math
+           * If the resume shows 7+ years of work history, the result should reflect that accurately
 
         5. **Education:**
            For each educational institution:
@@ -166,9 +164,10 @@ async def analyze_resume(input_question):
         5. Group skills logically by category
         6. Extract all projects, certifications, and achievements mentioned
         7. Ensure the professional summary is comprehensive and highlights key strengths
-        8. **MANDATORY**: Calculate YearsOfExperienceRequired by analyzing ALL work experience dates and summing the total professional experience
-        9. For YearsOfExperienceRequired, be precise in date calculations and handle edge cases properly
-        10. If multiple overlapping positions exist, count the time period only once to avoid double-counting
+        8. **MANDATORY**: Calculate YearsOfExperienceRequired ACCURATELY by analyzing ALL work experience dates and summing total professional experience
+        9. For YearsOfExperienceRequired, be extremely precise with date calculations - use 2025 as current year for "Present"
+        10. **CRITICAL**: Double-check your math to ensure 7 years of experience shows as "7 years", not "4.8 years"
+        11. If multiple overlapping positions exist, count the time period only once to avoid double-counting
 
         """
 
@@ -176,7 +175,7 @@ async def analyze_resume(input_question):
     client = await get_async_client()
     
     completion = await client.beta.chat.completions.parse(
-    model="gpt-4o-mini",
+    model="gpt-5.1",
     messages=[
         {"role": "system", "content": prompt_template},
         {"role": "user", "content": input_question}

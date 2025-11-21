@@ -11,7 +11,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from shared_client import get_async_client
 
 load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
+# openai_api_key = os.getenv("OPENAI_API_KEY")
 
 class Certifications(BaseModel):
     CertificationName: str
@@ -154,7 +154,7 @@ async def analyze_certifications(input_question, jd_input):
     client = await get_async_client()
     
     completion = await client.beta.chat.completions.parse(
-    model="gpt-4o-mini",
+    model="gpt-5.1",
     messages=[
         {"role": "system", "content": prompt_template},
         {"role": "user", "content": f"Certification Information: {input_question}\n\nJob Description Qualification Requirements for ATS Optimization:\nRequired Qualifications: {jd_input.get('required_qualifications', [])}\nPreferred Qualifications: {jd_input.get('preferred_qualifications', [])}"}
