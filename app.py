@@ -192,7 +192,7 @@ async def improve_resume(
         if not all_questions:
             print("⚠️ No questions generated, providing default questions")
             all_questions = {
-                "Default Company": [
+                "Based on your Company": [
                     "What were your key responsibilities and achievements in this role?",
                     "Can you quantify the impact you made on the business or team?",
                     "What specific skills or technologies did you utilize or learn?",
@@ -332,7 +332,7 @@ async def ATS_resume(
         if not all_questions:
             print("⚠️ No questions generated, providing default questions")
             all_questions = {
-                "Default Company": [
+                "Based on your Company": [
                     "What were your key responsibilities and achievements in this role?",
                     "Can you quantify the impact you made on the business or team?",
                     "What specific skills or technologies did you utilize or learn?",
