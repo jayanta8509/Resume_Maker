@@ -15,4 +15,8 @@ chat_section.png
 my_faiss_db
 jayanta123_faiss_db
 
+31.97.61.2
+
+/home/hiringeye-resumebuilderai/htdocs/resumebuilderai.hiringeye.ai
+
 start code :- nohup python3 app.py start > app.log 2>&1 &

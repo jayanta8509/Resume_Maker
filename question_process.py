@@ -16,6 +16,16 @@ def collect_resume_andlinkdin_data(user_id , resume_path , linkedin_file_path):
         print(f"Error in collect_resume_data: {e}")
         raise
 
+def collect_resume_andlinkdin_data_text(user_id , resume_path):
+    try:
+        db = FAISSVectorDB(db_path=f"./{user_id}_faiss_db")
+
+        store = db.store_user_data(resume_path, user_id)
+        return 200          
+    except Exception as e:
+        print(f"Error in collect_resume_data: {e}")
+        raise
+
 def generate_questions(user_id):
     try:
         vector_db = FAISSVectorDB(db_path=f"./{user_id}_faiss_db")

@@ -10,6 +10,11 @@ import aiofiles
 from pathlib import Path
 from processing import resume_data, process_all_agents
 from ats_processing import resume_data as ats_resume_data, process_all_agents as ats_process_all_agents,collect_jd_data
+
+from processing_txt import resume_data as resume_data_text, process_all_agents as process_all_agents_text
+
+from ats_processing_text import resume_data as ats_resume_data_text, process_all_agents as ats_process_all_agents_text,collect_jd_data as collect_jd_data_text
+
 from Agent.ats_agent import analyze_ats
 from Agent.ats_with_jd_agent import analyze_ats_with_jd
 from Scraper.resume_scraper import get_resume_content
@@ -17,7 +22,7 @@ from linkedin_rewrite_process import linkedin_rewrite_process
 from linkedin_rewrite_process import linkedin_rewrite_process_text
 from chat_section.Experience_agent import improve_experience_description
 from chat_section.vectordata import FAISSVectorDB
-from question_process import collect_resume_andlinkdin_data , generate_questions
+from question_process import collect_resume_andlinkdin_data , generate_questions , collect_resume_andlinkdin_data_text
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -230,6 +235,102 @@ async def improve_resume(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")
     
+
+@app.post("/improvement-resume-text")
+async def improve_resume(
+    resume_txt : str = Form(description = "txt-data")
+):
+    """Improve resume using provided links and uploaded resume file"""
+    try:
+        # Process resume data from all sources
+        Basic_Information, resume_tokens, github_tokens, protflow_tokens, other_link_tokens = await resume_data_text(
+            resume_txt
+        )
+        # Process all agents and get comprehensive analysis
+        analysis_results = await process_all_agents(
+            Basic_Information, resume_tokens, github_tokens, protflow_tokens, other_link_tokens
+        )
+        # store_data = collect_resume_andlinkdin_data_text(user_id, resume_txt)
+        # all_questions = generate_questions(user_id)
+
+        # # Ensure we always return some questions, even if generation fails
+        # if not all_questions:
+        #     print("⚠️ No questions generated, providing default questions")
+        #     all_questions = {
+        #         "Based on your Company": [
+        #             "What were your key responsibilities and achievements in this role?",
+        #             "Can you quantify the impact you made on the business or team?",
+        #             "What specific skills or technologies did you utilize or learn?",
+        #             "What challenges did you overcome and how did you solve them?",
+        #             "What projects were you most proud of and why?"
+        #         ]
+        #     }
+
+        return {
+            "status_code": 200,
+            "status": "success",
+            "message": "Comprehensive resume analysis completed successfully",
+            # "generated_questions": all_questions,
+            **analysis_results
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")
+
+
+@app.post("/ATS-resume-text")
+async def ATS_resume(
+    resume_file: str = Form(..., description="Resume text"),
+    job_description: str = Form(..., description="Job description")
+):
+    """ATS resume using provided links and uploaded resume file"""
+    try:
+        # Process job description to extract structured JD data
+        print("🔍 Processing job description...")
+        jd_data = await collect_jd_data_text(job_description)
+        # jd_tokens = jd_data.get('tokens', 0)
+        
+        # Process resume data from all sources using ATS processing
+        print("📄 Processing resume and external sources...")
+        Basic_Information, resume_tokens, github_tokens, protflow_tokens, other_link_tokens = await ats_resume_data_text(
+            resume_file
+        )
+        
+        # Process all ATS agents with JD data for optimization
+        print("🤖 Running ATS-optimized agent analysis...")
+        analysis_results = await ats_process_all_agents_text(
+            Basic_Information, jd_data, resume_tokens, github_tokens, protflow_tokens, other_link_tokens
+        )
+        # store_data = collect_resume_andlinkdin_data_text(user_id, resume_file)
+        # all_questions = generate_questions(user_id)
+
+        # # Ensure we always return some questions, even if generation fails
+        # if not all_questions:
+        #     print("⚠️ No questions generated, providing default questions")
+        #     all_questions = {
+        #         "Based on your Company": [
+        #             "What were your key responsibilities and achievements in this role?",
+        #             "Can you quantify the impact you made on the business or team?",
+        #             "What specific skills or technologies did you utilize or learn?",
+        #             "What challenges did you overcome and how did you solve them?",
+        #             "What projects were you most proud of and why?"
+        #         ]
+        #     }
+
+        return {
+            "status_code": 200,
+            "status": "success",
+            "message": "ATS-optimized resume analysis completed successfully",
+            # "generated_questions": all_questions,
+            **analysis_results
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")
 
 
 @app.post("/ATS-resume")
